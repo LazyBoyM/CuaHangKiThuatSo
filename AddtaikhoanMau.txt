@@ -1,0 +1,3 @@
+curl -X POST http://localhost:5000/api/users/register -H "Content-Type: application/json" -d "{\"name\":\"Shop Demo\",\"email\":\"shop1@demo.com\",\"password\":\"123456\",\"role\":\"seller\"}"
+curl -X POST http://localhost:5000/api/users/register -H "Content-Type: application/json" -d "{\"name\":\"Người Mua\",\"email\":\"buyer1@demo.com\",\"password\":\"123456\",\"role\":\"buyer\"}"
+curl -X POST http://localhost:5000/api/users/register -H "Content-Type: application/json" -d "{\"name\":\"Admin\",\"email\":\"admin@market.com\",\"password\":\"123456\",\"role\":\"admin\"}"

@@ -1,0 +1,266 @@
+version: '3.8'
+
+services:
+  # ==================== NGINX GATEWAY ====================
+  nginx-gateway:
+    build: ./nginx-gateway
+    container_name: marketplace-gateway
+    ports:
+      - "5000:5000"
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - payment-service
+      - review-service
+      - coupon-service
+      - notification-service
+    networks:
+      - marketplace-net
+
+  # ==================== USER SERVICE ====================
+  user-service:
+    build: ./user-service
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGO_URI=mongodb://root:example@user-db:27017/user-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      - user-db
+    networks:
+      - marketplace-net
+
+  user-db:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - user-db-data:/data/db
+    networks:
+      - marketplace-net
+
+  # ==================== PRODUCT SERVICE ====================
+  product-service:
+    build: ./product-service
+    ports:
+      - "5002:5002"
+    environment:
+      - MONGO_URI=mongodb://root:example@product-db:27017/product-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - USER_SERVICE_URL=http://user-service:5001
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5008
+    depends_on:
+      - product-db
+    networks:
+      - marketplace-net
+
+  product-db:
+    image: mongo:6.0
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - product-db-data:/data/db
+    networks:
+      - marketplace-net
+
+  # ==================== ORDER SERVICE ====================
+  order-service:
+    build: ./order-service
+    ports:
+      - "5003:5003"
+    environment:
+      - MONGO_URI=mongodb://root:example@order-db:27017/order-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - PRODUCT_SERVICE_URL=http://product-service:5002
+      - USER_SERVICE_URL=http://user-service:5001
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5008
+      - PLATFORM_FEE_PERCENT=5
+    depends_on:
+      - order-db
+    networks:
+      - marketplace-net
+
+  order-db:
+    image: mongo:6.0
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - order-db-data:/data/db
+    networks:
+      - marketplace-net
+
+  # ==================== PAYMENT SERVICE ====================
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "5004:5004"
+    environment:
+      - MONGO_URI=mongodb://root:example@payment-db:27017/payment-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - ORDER_SERVICE_URL=http://order-service:5003
+      - PRODUCT_SERVICE_URL=http://product-service:5002
+      - COUPON_SERVICE_URL=http://coupon-service:5006
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - MOMO_ACCESS_KEY=${MOMO_ACCESS_KEY}
+      - MOMO_SECRET_KEY=${MOMO_SECRET_KEY}
+      - MOMO_PARTNER_CODE=${MOMO_PARTNER_CODE}
+      - MOMO_REDIRECT_URL=${MOMO_REDIRECT_URL}
+      - MOMO_IPN_URL=${MOMO_IPN_URL}
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5008
+    depends_on:
+      - payment-db
+    networks:
+      - marketplace-net
+
+  payment-db:
+    image: mongo:6.0
+    ports:
+      - "27020:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - payment-db-data:/data/db
+    networks:
+      - marketplace-net
+
+  # ==================== REVIEW SERVICE ====================
+  review-service:
+    build: ./review-service
+    ports:
+      - "5005:5005"
+    environment:
+      - MONGO_URI=mongodb://root:example@review-db:27017/review-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - PRODUCT_SERVICE_URL=http://product-service:5002
+      - ORDER_SERVICE_URL=http://order-service:5003
+      - USER_SERVICE_URL=http://user-service:5001
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      - review-db
+    networks:
+      - marketplace-net
+
+  review-db:
+    image: mongo:6.0
+    ports:
+      - "27021:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - review-db-data:/data/db
+    networks:
+      - marketplace-net
+
+  # ==================== COUPON SERVICE ====================
+  coupon-service:
+    build: ./coupon-service
+    ports:
+      - "5006:5006"
+    environment:
+      - MONGO_URI=mongodb://root:example@coupon-db:27017/coupon-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - PRODUCT_SERVICE_URL=http://product-service:5002
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      - coupon-db
+    networks:
+      - marketplace-net
+
+  coupon-db:
+    image: mongo:6.0
+    ports:
+      - "27022:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - coupon-db-data:/data/db
+    networks:
+      - marketplace-net
+
+  # ==================== CHAT SERVICE ====================
+  chat-service:
+    container_name: chat-service
+    build: ./chat-service
+    ports:
+      - "5007:5007"
+    environment:
+      - MONGO_URI=mongodb://root:example@chat-db:27017/chat-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - NOTIFICATION_SERVICE_URL=http://notification-service:5008
+    depends_on:
+      - chat-db
+    networks:
+      - marketplace-net
+
+  chat-db:
+    image: mongo:6.0
+    ports:
+      - "27023:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - chat-db-data:/data/db
+    networks:
+      - marketplace-net
+
+  # ==================== NOTIFICATION SERVICE ====================
+  notification-service:
+    container_name: notification-service
+    build: ./notification-service
+    ports:
+      - "5008:5008"
+    environment:
+      - MONGO_URI=mongodb://root:example@notification-db:27017/notification-service?authSource=admin
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      - notification-db
+    networks:
+      - marketplace-net
+
+  notification-db:
+    image: mongo:6.0
+    container_name: notification-db
+    ports:
+      - "27024:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - notification-db-data:/data/db
+    networks:
+      - marketplace-net
+
+# ==================== VOLUMES ====================
+volumes:
+  user-db-data:
+  product-db-data:
+  order-db-data:
+  payment-db-data:
+  review-db-data:
+  coupon-db-data:
+  chat-db-data:
+  notification-db-data:
+
+# ==================== NETWORKS ====================
+networks:
+  marketplace-net:
+    driver: bridge
